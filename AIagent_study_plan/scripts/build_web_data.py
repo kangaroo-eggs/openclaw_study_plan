@@ -60,8 +60,17 @@ def clean_source_word(raw: str) -> str:
     return raw.strip().strip(".").strip()
 
 
+def load_vocabulary_details() -> dict[str, dict]:
+    details = ROOT / "vocabulary_details" / "all_vocabulary_details.json"
+    if not details.exists():
+        return {}
+    items = json.loads(details.read_text(encoding="utf-8"))
+    return {item["key"]: item for item in items}
+
+
 def parse_source_vocabulary() -> list[dict]:
     source = ROOT / "7000words.txt"
+    detail_by_key = load_vocabulary_details()
     if not source.exists():
         return []
     vocabulary = []
@@ -90,7 +99,7 @@ def parse_source_vocabulary() -> list[dict]:
                 continue
             seen.add(key)
             number += 1
-            vocabulary.append({
+            base_item = {
                 "number": number,
                 "word": word,
                 "key": key,
@@ -101,7 +110,17 @@ def parse_source_vocabulary() -> list[dict]:
                 "japanese": "",
                 "englishExample": "",
                 "japaneseExample": "",
-            })
+            }
+            if key in detail_by_key:
+                detail = detail_by_key[key]
+                base_item.update({
+                    "pos": detail.get("pos", ""),
+                    "chinese": detail.get("chinese", ""),
+                    "japanese": detail.get("japanese", ""),
+                    "englishExample": detail.get("englishExample", ""),
+                    "japaneseExample": detail.get("japaneseExample", ""),
+                })
+            vocabulary.append(base_item)
     return vocabulary
 
 

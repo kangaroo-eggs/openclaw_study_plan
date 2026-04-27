@@ -24,3 +24,11 @@ parse.py
 __pycache__/
 *.pyc
 node_modules/
+
+# Generated intermediate vocabulary enrichment work files
+AIagent_study_plan/vocabulary_detail_chunks/
+AIagent_study_plan/vocabulary_details/details_*.json
+AIagent_study_plan/scripts/generate_details_*.py
+AIagent_study_plan/scripts/refine_details_*.py
+fix_details_*.py
+tmp_fix*.py
