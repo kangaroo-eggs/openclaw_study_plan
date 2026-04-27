@@ -1,0 +1,26 @@
+# macOS / editor noise
+.DS_Store
+*/.DS_Store
+
+# OpenClaw workspace/private runtime files
+.openclaw/
+.trash/
+AGENTS.md
+BOOTSTRAP.md
+HEARTBEAT.md
+IDENTITY.md
+SOUL.md
+TOOLS.md
+USER.md
+skills/
+
+# Local scratch/output files
+output.png
+output.txt
+generate_plan.py
+parse.py
+
+# Python / web cache
+__pycache__/
+*.pyc
+node_modules/
