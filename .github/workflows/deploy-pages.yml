@@ -39,7 +39,7 @@ jobs:
       - name: Upload static site artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: AIagent_study_plan
+          path: .
 
   deploy:
     environment:
