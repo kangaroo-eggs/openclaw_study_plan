@@ -142,15 +142,62 @@ button.active, .tab.active { background: var(--brand); color: white; border-colo
 .story-lang p { margin: 0; }
 .empty { color: var(--muted); font-style: italic; }
 
-body.focus .sidebar, body.focus .stats-grid, body.focus .tabs, body.focus .toolbar { display: none; }
+body.focus .sidebar, body.focus .stats-grid, body.focus .tabs, body.focus .toolbar, body.focus .mobile-nav-toggle { display: none; }
 body.focus .app-shell { grid-template-columns: 1fr; }
 body.focus .content { max-width: 920px; margin: 0 auto; }
 
+.mobile-nav-toggle { display: none; }
+.mobile-backdrop { display: none; }
+
 @media (max-width: 860px) {
-  .app-shell { grid-template-columns: 1fr; }
-  .sidebar { position: relative; height: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+  body { background-attachment: fixed; }
+  .app-shell { display: block; min-height: 100vh; }
+  .mobile-nav-toggle {
+    position: fixed;
+    left: .9rem;
+    bottom: .9rem;
+    z-index: 30;
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    background: var(--brand);
+    color: white;
+    border-color: var(--brand);
+    box-shadow: var(--shadow);
+    font-weight: 800;
+  }
+  .mobile-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: block;
+    background: rgba(0, 0, 0, .38);
+    backdrop-filter: blur(2px);
+  }
+  .mobile-backdrop[hidden] { display: none; }
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 25;
+    width: min(88vw, 340px);
+    height: 100dvh;
+    transform: translateX(-105%);
+    transition: transform .2s ease;
+    border-right: 1px solid var(--line);
+    border-bottom: 0;
+    box-shadow: var(--shadow);
+  }
+  body.nav-open .sidebar { transform: translateX(0); }
+  .content {
+    padding: 1rem .85rem 5.5rem;
+    width: 100%;
+  }
   .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .topbar { flex-direction: column; }
+  .topbar { flex-direction: column; gap: .75rem; }
+  #dayTitle { font-size: clamp(1.65rem, 8vw, 2.4rem); }
   .toolbar { justify-content: flex-start; }
+  .tabs { overflow-x: auto; top: 0; padding-top: .45rem; }
+  .tab { white-space: nowrap; }
+  .word-grid { grid-template-columns: 1fr; }
   .meaning-row { grid-template-columns: 1fr; }
 }

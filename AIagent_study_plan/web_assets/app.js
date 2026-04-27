@@ -148,6 +148,23 @@ function renderDayContent(day) {
   $('#dayContent').innerHTML = chunks.join('');
 }
 
+function closeMobileNav() {
+  document.body.classList.remove('nav-open');
+  const toggle = $('#mobileNavToggle');
+  const backdrop = $('#mobileBackdrop');
+  if (toggle) toggle.setAttribute('aria-expanded', 'false');
+  if (backdrop) backdrop.hidden = true;
+}
+
+function toggleMobileNav() {
+  const open = !document.body.classList.contains('nav-open');
+  document.body.classList.toggle('nav-open', open);
+  const toggle = $('#mobileNavToggle');
+  const backdrop = $('#mobileBackdrop');
+  if (toggle) toggle.setAttribute('aria-expanded', String(open));
+  if (backdrop) backdrop.hidden = !open;
+}
+
 function showDay(date) {
   const day = findDay(date);
   state.currentDate = day.date;
@@ -157,6 +174,7 @@ function showDay(date) {
   renderStats(day);
   renderNav();
   renderDayContent(day);
+  closeMobileNav();
 }
 
 function renderSearch(query) {
@@ -216,6 +234,11 @@ function bindEvents() {
   $('#themeToggle').addEventListener('click', () => {
     document.body.classList.toggle('dark');
     localStorage.setItem('studyTheme', document.body.classList.contains('dark') ? 'dark' : 'light');
+  });
+  $('#mobileNavToggle')?.addEventListener('click', toggleMobileNav);
+  $('#mobileBackdrop')?.addEventListener('click', closeMobileNav);
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeMobileNav();
   });
 }
 
