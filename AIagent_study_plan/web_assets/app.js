@@ -231,6 +231,7 @@ function bindEvents() {
   $('#fontPlus').addEventListener('click', () => setFontScale(state.fontScale + 0.05));
   $('#fontMinus').addEventListener('click', () => setFontScale(state.fontScale - 0.05));
   $('#focusMode').addEventListener('click', () => document.body.classList.toggle('focus'));
+  $('#focusExit')?.addEventListener('click', () => document.body.classList.remove('focus'));
   $('#themeToggle').addEventListener('click', () => {
     document.body.classList.toggle('dark');
     localStorage.setItem('studyTheme', document.body.classList.contains('dark') ? 'dark' : 'light');
@@ -238,7 +239,10 @@ function bindEvents() {
   $('#mobileNavToggle')?.addEventListener('click', toggleMobileNav);
   $('#mobileBackdrop')?.addEventListener('click', closeMobileNav);
   window.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeMobileNav();
+    if (event.key === 'Escape') {
+      closeMobileNav();
+      document.body.classList.remove('focus');
+    }
   });
 }
 
