@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>英文 7000 單字學習計劃</title>
+  <link rel="stylesheet" href="web_assets/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="學習日期導覽">
+      <div class="brand">
+        <div class="brand-mark">7000</div>
+        <div>
+          <h1>英文單字學習</h1>
+          <p>30 新字 + 10 複習 / day</p>
+        </div>
+      </div>
+
+      <label class="search-box">
+        <span>搜尋單字 / 中文 / 日文</span>
+        <input id="searchInput" type="search" placeholder="例如: justice、正義、提案" autocomplete="off" />
+      </label>
+
+      <div class="sidebar-actions">
+        <button id="todayBtn" type="button">今天</button>
+        <button id="firstBtn" type="button">第一天</button>
+      </div>
+
+      <nav id="weekNav" class="week-nav"></nav>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <div>
+          <p id="eyebrow" class="eyebrow">Loading…</p>
+          <h2 id="dayTitle">讀取中</h2>
+        </div>
+        <div class="toolbar" aria-label="閱讀控制">
+          <button id="fontMinus" type="button" title="縮小字體">A-</button>
+          <button id="fontPlus" type="button" title="放大字體">A+</button>
+          <button id="focusMode" type="button" title="切換專注模式">專注</button>
+          <button id="themeToggle" type="button" title="切換深色模式">深色</button>
+        </div>
+      </header>
+
+      <section id="stats" class="stats-grid" aria-label="學習統計"></section>
+
+      <section id="searchResults" class="panel search-results" hidden>
+        <div class="panel-head">
+          <h3>搜尋結果</h3>
+          <button id="clearSearch" type="button">清除</button>
+        </div>
+        <div id="resultList" class="result-list"></div>
+      </section>
+
+      <section class="tabs" aria-label="內容切換">
+        <button class="tab active" data-tab="new">新單字</button>
+        <button class="tab" data-tab="review">複習</button>
+        <button class="tab" data-tab="story">故事</button>
+        <button class="tab" data-tab="all">全部</button>
+      </section>
+
+      <section id="dayContent" class="day-content"></section>
+    </main>
+  </div>
+
+  <template id="wordCardTemplate">
+    <article class="word-card">
+      <div class="word-head">
+        <span class="word-number"></span>
+        <div>
+          <h4 class="word"></h4>
+          <p class="pos"></p>
+        </div>
+      </div>
+      <div class="meaning-row">
+        <div><span class="label">中文</span><p class="chinese"></p></div>
+        <div><span class="label">日本語</span><p class="japanese"></p></div>
+      </div>
+      <div class="examples">
+        <p class="english-example"></p>
+        <p class="japanese-example"></p>
+      </div>
+    </article>
+  </template>
+
+  <script src="web_assets/app.js"></script>
+</body>
+</html>
