@@ -1,7 +1,8 @@
 const state = {
   data: null,
   currentDate: null,
-  tab: 'new',
+  primaryTab: 'plan',
+  planTab: 'new',
   fontScale: Number(localStorage.getItem('studyFontScale') || '1'),
   db: null,
   progress: new Map(),
@@ -306,21 +307,27 @@ function bindProgressButtons() {
 
 function renderDayContent(day) {
   const chunks = [];
-  if (state.tab === 'new' || state.tab === 'all') chunks.push(wordsSection('新單字 30', day.newWords, '今天沒有新單字。'));
-  if (state.tab === 'review' || state.tab === 'all') chunks.push(wordsSection('複習單字 10', day.reviewWords, '今天沒有複習單字。'));
-  if (state.tab === 'story' || state.tab === 'all') chunks.push(storySection(day));
-  if (state.tab === 'vocabulary') {
+  $('#planSubTabs').hidden = state.primaryTab !== 'plan';
+
+  if (state.primaryTab === 'plan') {
+    if (state.planTab === 'new') chunks.push(wordsSection('今日新單字 30', day.newWords, '今天沒有新單字。'));
+    if (state.planTab === 'review') chunks.push(wordsSection('複習單字 10', day.reviewWords, '今天沒有複習單字。'));
+    if (state.planTab === 'story') chunks.push(storySection(day));
+  }
+
+  if (state.primaryTab === 'vocabulary') {
     const vocabulary = uniqueWordItems();
     chunks.push(wordsSection(`所有單字 ${vocabulary.length}`, vocabulary, '沒有找到 7000words.txt 的單字資料。'));
   }
-  if (state.tab === 'learned') {
+  if (state.primaryTab === 'learned') {
     const learned = uniqueWordItems().filter(item => getProgress(wordKey(item)).learned);
     chunks.push(wordsSection(`已學會 ${learned.length}`, learned, '還沒有標記為已學會的單字。'));
   }
-  if (state.tab === 'unfamiliar') {
+  if (state.primaryTab === 'unfamiliar') {
     const unfamiliar = uniqueWordItems().filter(item => getProgress(wordKey(item)).unfamiliar);
     chunks.push(wordsSection(`不熟單字 ${unfamiliar.length}`, unfamiliar, '還沒有標記為不熟的單字。'));
   }
+
   $('#dayContent').innerHTML = chunks.join('');
   bindProgressButtons();
 }
@@ -375,32 +382,42 @@ function renderSearch(query) {
   $('#resultList').innerHTML = results.length ? results.slice(0, 120).map(r => {
     const p = getProgress(wordKey(r.item));
     const badges = [p.learned ? '已學會' : '', p.unfamiliar ? '不熟' : ''].filter(Boolean).join(' · ');
-    const tab = r.type === 'vocabulary' ? 'vocabulary' : 'new';
+    const primaryTab = r.type === 'vocabulary' ? 'vocabulary' : 'plan';
+    const planTab = r.type === 'vocabulary' ? 'new' : 'new';
     const place = r.item.firstDate ? `學習日 ${r.item.firstDate}` : (r.item.level || '所有單字');
     const meaning = [r.item.chinese, r.item.japanese].filter(Boolean).join(' · ') || '尚未排入每日計劃';
     return `
-    <div class="result-item" data-date="${r.day.date}" data-tab="${tab}">
+    <div class="result-item" data-date="${r.day.date}" data-primary-tab="${primaryTab}" data-plan-tab="${planTab}">
       <strong>${escapeHtml(r.item.word)}</strong>
       <span>${escapeHtml(meaning)} · ${escapeHtml(place)}${badges ? ' · ' + escapeHtml(badges) : ''}</span>
     </div>`;
   }).join('') : '<p class="empty">找不到符合的單字。</p>';
 
   $$('.result-item').forEach(item => item.addEventListener('click', () => {
-    setTab(item.dataset.tab);
+    setPrimaryTab(item.dataset.primaryTab || 'plan');
+    setPlanTab(item.dataset.planTab || 'new', false);
     showDay(item.dataset.date);
     $('#searchInput').blur();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }));
 }
 
-function setTab(tab) {
-  state.tab = tab;
-  $$('.tab').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
-  renderDayContent(findDay(state.currentDate));
+function setPrimaryTab(tab, render = true) {
+  state.primaryTab = tab;
+  $$('.primary-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.primaryTab === tab));
+  $('#planSubTabs').hidden = tab !== 'plan';
+  if (render) renderDayContent(findDay(state.currentDate));
+}
+
+function setPlanTab(tab, render = true) {
+  state.planTab = tab;
+  $$('.sub-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.planTab === tab));
+  if (render) renderDayContent(findDay(state.currentDate));
 }
 
 function bindEvents() {
-  $$('.tab').forEach(btn => btn.addEventListener('click', () => setTab(btn.dataset.tab)));
+  $$('.primary-tab').forEach(btn => btn.addEventListener('click', () => setPrimaryTab(btn.dataset.primaryTab)));
+  $$('.sub-tab').forEach(btn => btn.addEventListener('click', () => setPlanTab(btn.dataset.planTab)));
   $('#searchInput').addEventListener('input', (e) => renderSearch(e.target.value));
   $('#clearSearch').addEventListener('click', () => { $('#searchInput').value = ''; renderSearch(''); });
   $('#todayBtn').addEventListener('click', () => {

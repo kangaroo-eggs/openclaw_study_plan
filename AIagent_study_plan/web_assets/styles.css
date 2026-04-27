@@ -117,6 +117,9 @@ button.active, .tab.active { background: var(--brand); color: white; border-colo
 .result-item span { color: var(--muted); font-size: .9rem; }
 
 .tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: .5rem; padding: .6rem 0; background: color-mix(in srgb, var(--bg) 80%, transparent); backdrop-filter: blur(12px); }
+.tabs[hidden] { display: none; }
+.sub-tabs { top: 3.45rem; z-index: 4; padding-top: .15rem; }
+.sub-tab { font-size: .92rem; }
 .tab { padding: .6rem 1rem; }
 
 .day-content { display: grid; gap: 1rem; }
@@ -218,6 +221,7 @@ body.focus .focus-exit { display: inline-flex; }
   #dayTitle { font-size: clamp(1.65rem, 8vw, 2.4rem); }
   .toolbar { justify-content: flex-start; }
   .tabs { overflow-x: auto; top: 0; padding-top: .45rem; }
+  .sub-tabs { top: 3.35rem; }
   .tab { white-space: nowrap; }
   .word-grid { grid-template-columns: 1fr; }
   .meaning-row { grid-template-columns: 1fr; }

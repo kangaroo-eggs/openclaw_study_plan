@@ -57,14 +57,17 @@
         <div id="resultList" class="result-list"></div>
       </section>
 
-      <section class="tabs" aria-label="內容切換">
-        <button class="tab active" data-tab="new">新單字</button>
-        <button class="tab" data-tab="review">複習</button>
-        <button class="tab" data-tab="story">故事</button>
-        <button class="tab" data-tab="vocabulary">所有單字</button>
-        <button class="tab" data-tab="learned">已學會</button>
-        <button class="tab" data-tab="unfamiliar">不熟</button>
-        <button class="tab" data-tab="all">全部</button>
+      <section class="tabs primary-tabs" aria-label="主要內容切換">
+        <button class="tab primary-tab active" data-primary-tab="plan">今日學習計畫</button>
+        <button class="tab primary-tab" data-primary-tab="learned">已學會</button>
+        <button class="tab primary-tab" data-primary-tab="unfamiliar">不熟</button>
+        <button class="tab primary-tab" data-primary-tab="vocabulary">所有單字</button>
+      </section>
+
+      <section id="planSubTabs" class="tabs sub-tabs" aria-label="今日學習計畫切換">
+        <button class="tab sub-tab active" data-plan-tab="new">今日新單字</button>
+        <button class="tab sub-tab" data-plan-tab="review">複習</button>
+        <button class="tab sub-tab" data-plan-tab="story">故事</button>
       </section>
 
       <section id="dayContent" class="day-content"></section>
