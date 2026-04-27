@@ -124,10 +124,17 @@ button.active, .tab.active { background: var(--brand); color: white; border-colo
 .section-card > h3 { margin: 0 0 1rem; font-size: 1.35rem; }
 .word-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: .85rem; }
 .word-card { background: var(--surface-2); border: 1px solid var(--line); border-radius: 16px; padding: 1rem; display: grid; gap: .85rem; }
+.word-card.is-learned { border-color: color-mix(in srgb, var(--green) 55%, var(--line)); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--green) 18%, transparent); }
+.word-card.is-unfamiliar { border-color: color-mix(in srgb, var(--brand) 65%, var(--line)); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--brand) 18%, transparent); }
+.word-card.is-learned.is-unfamiliar { border-style: dashed; }
 .word-head { display: flex; gap: .75rem; align-items: flex-start; }
 .word-number { flex: 0 0 auto; min-width: 2.15rem; height: 2.15rem; display: grid; place-items: center; border-radius: 12px; background: color-mix(in srgb, var(--brand) 14%, transparent); color: var(--brand); font-weight: 900; }
 .word-card h4 { margin: 0; font-size: 1.35rem; letter-spacing: -.02em; }
 .pos { margin: .05rem 0 0; color: var(--muted); font-weight: 700; }
+.progress-actions { display: flex; flex-wrap: wrap; gap: .45rem; }
+.progress-btn { padding: .38rem .7rem; font-size: .86rem; }
+.learned-btn.active { background: var(--green); color: #fff; border-color: var(--green); }
+.unfamiliar-btn.active { background: var(--brand); color: #fff; border-color: var(--brand); }
 .meaning-row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
 .label { color: var(--muted); font-size: .78rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
 .meaning-row p, .examples p { margin: .15rem 0 0; }

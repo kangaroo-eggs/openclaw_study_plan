@@ -3,7 +3,12 @@ const state = {
   currentDate: null,
   tab: 'new',
   fontScale: Number(localStorage.getItem('studyFontScale') || '1'),
+  db: null,
+  progress: new Map(),
+  sqlReady: false,
 };
+
+const DB_KEY = 'studyPlanSqliteDbV1';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -35,6 +40,10 @@ function formatDate(date) {
   }
 }
 
+function wordKey(item) {
+  return String(item?.word || '').trim().toLowerCase();
+}
+
 function allDays() {
   return state.data.weeks.flatMap(w => w.days);
 }
@@ -47,6 +56,117 @@ function setFontScale(scale) {
   state.fontScale = Math.min(1.35, Math.max(0.85, scale));
   document.documentElement.style.setProperty('--font-scale', state.fontScale);
   localStorage.setItem('studyFontScale', String(state.fontScale));
+}
+
+function bytesToBase64(bytes) {
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+function base64ToBytes(base64) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+async function initProgressDb() {
+  try {
+    if (typeof initSqlJs !== 'function') throw new Error('sql.js is not loaded');
+    const SQL = await initSqlJs({ locateFile: file => `https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/${file}` });
+    const saved = localStorage.getItem(DB_KEY);
+    state.db = saved ? new SQL.Database(base64ToBytes(saved)) : new SQL.Database();
+    state.db.run(`
+      CREATE TABLE IF NOT EXISTS word_progress (
+        word TEXT PRIMARY KEY,
+        learned INTEGER NOT NULL DEFAULT 0,
+        unfamiliar INTEGER NOT NULL DEFAULT 0,
+        learned_at TEXT,
+        unfamiliar_at TEXT,
+        updated_at TEXT NOT NULL
+      );
+    `);
+    state.sqlReady = true;
+    loadProgressFromDb();
+    saveProgressDb();
+  } catch (error) {
+    console.warn('SQLite progress unavailable; falling back to localStorage JSON.', error);
+    state.sqlReady = false;
+    const fallback = JSON.parse(localStorage.getItem('studyProgressFallbackV1') || '{}');
+    state.progress = new Map(Object.entries(fallback));
+  }
+}
+
+function loadProgressFromDb() {
+  state.progress.clear();
+  if (!state.db) return;
+  const rows = state.db.exec('SELECT word, learned, unfamiliar, learned_at, unfamiliar_at, updated_at FROM word_progress');
+  if (!rows.length) return;
+  for (const row of rows[0].values) {
+    const [word, learned, unfamiliar, learnedAt, unfamiliarAt, updatedAt] = row;
+    state.progress.set(word, {
+      learned: Boolean(learned),
+      unfamiliar: Boolean(unfamiliar),
+      learnedAt,
+      unfamiliarAt,
+      updatedAt,
+    });
+  }
+}
+
+function saveProgressDb() {
+  if (state.db) {
+    localStorage.setItem(DB_KEY, bytesToBase64(state.db.export()));
+  } else {
+    localStorage.setItem('studyProgressFallbackV1', JSON.stringify(Object.fromEntries(state.progress)));
+  }
+}
+
+function getProgress(word) {
+  return state.progress.get(String(word || '').toLowerCase()) || { learned: false, unfamiliar: false };
+}
+
+function setProgress(word, patch) {
+  const key = String(word || '').toLowerCase();
+  const now = new Date().toISOString();
+  const current = getProgress(key);
+  const next = {
+    ...current,
+    ...patch,
+    learnedAt: patch.learned === true ? now : (patch.learned === false ? null : current.learnedAt),
+    unfamiliarAt: patch.unfamiliar === true ? now : (patch.unfamiliar === false ? null : current.unfamiliarAt),
+    updatedAt: now,
+  };
+  state.progress.set(key, next);
+
+  if (state.db) {
+    state.db.run(
+      `INSERT INTO word_progress (word, learned, unfamiliar, learned_at, unfamiliar_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(word) DO UPDATE SET
+         learned = excluded.learned,
+         unfamiliar = excluded.unfamiliar,
+         learned_at = excluded.learned_at,
+         unfamiliar_at = excluded.unfamiliar_at,
+         updated_at = excluded.updated_at`,
+      [key, next.learned ? 1 : 0, next.unfamiliar ? 1 : 0, next.learnedAt, next.unfamiliarAt, next.updatedAt]
+    );
+  }
+  saveProgressDb();
+}
+
+function progressStats() {
+  let learned = 0;
+  let unfamiliar = 0;
+  for (const value of state.progress.values()) {
+    if (value.learned) learned += 1;
+    if (value.unfamiliar) unfamiliar += 1;
+  }
+  return { learned, unfamiliar };
 }
 
 function renderNav() {
@@ -67,11 +187,12 @@ function renderNav() {
 }
 
 function renderStats(day) {
+  const ps = progressStats();
   $('#stats').innerHTML = `
     <div class="stat-card"><strong>${day.newWords.length}</strong><span>今日新單字</span></div>
     <div class="stat-card"><strong>${day.reviewWords.length}</strong><span>今日複習</span></div>
-    <div class="stat-card"><strong>${state.data.stats.newWordEntries}</strong><span>全月新單字</span></div>
-    <div class="stat-card"><strong>${state.data.stats.days}</strong><span>學習天數</span></div>
+    <div class="stat-card"><strong>${ps.learned}</strong><span>已學會</span></div>
+    <div class="stat-card"><strong>${ps.unfamiliar}</strong><span>不熟單字</span></div>
   `;
 }
 
@@ -79,14 +200,23 @@ function wordCard(item) {
   if (item.parse_error) {
     return `<article class="word-card"><p class="empty">解析失敗：${escapeHtml(item.raw)}</p></article>`;
   }
+  const key = wordKey(item);
+  const progress = getProgress(key);
+  const classes = ['word-card'];
+  if (progress.learned) classes.push('is-learned');
+  if (progress.unfamiliar) classes.push('is-unfamiliar');
   return `
-    <article class="word-card" id="word-${escapeHtml(item.word.toLowerCase())}">
+    <article class="${classes.join(' ')}" id="word-${escapeHtml(key)}" data-word="${escapeHtml(key)}">
       <div class="word-head">
         <span class="word-number">${item.number}</span>
         <div>
           <h4 class="word">${escapeHtml(item.word)}</h4>
           <p class="pos">${escapeHtml(item.pos)}</p>
         </div>
+      </div>
+      <div class="progress-actions" aria-label="單字熟悉度">
+        <button class="progress-btn learned-btn ${progress.learned ? 'active' : ''}" data-action="learned" data-word="${escapeHtml(key)}" type="button">${progress.learned ? '已學會 ✓' : '標記已學會'}</button>
+        <button class="progress-btn unfamiliar-btn ${progress.unfamiliar ? 'active' : ''}" data-action="unfamiliar" data-word="${escapeHtml(key)}" type="button">${progress.unfamiliar ? '不熟 ★' : '標記不熟'}</button>
       </div>
       <div class="meaning-row">
         <div><span class="label">中文</span><p class="chinese">${escapeHtml(item.chinese)}</p></div>
@@ -107,6 +237,21 @@ function wordsSection(title, words, emptyText) {
       ${words.length ? `<div class="word-grid">${words.map(wordCard).join('')}</div>` : `<p class="empty">${emptyText}</p>`}
     </section>
   `;
+}
+
+function uniqueWordItems() {
+  const seen = new Set();
+  const items = [];
+  for (const day of allDays()) {
+    for (const item of [...day.newWords, ...day.reviewWords]) {
+      if (item.parse_error) continue;
+      const key = wordKey(item);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      items.push(item);
+    }
+  }
+  return items;
 }
 
 function storySection(day) {
@@ -140,12 +285,35 @@ function storySection(day) {
   `;
 }
 
+function bindProgressButtons() {
+  $$('.progress-btn').forEach(btn => btn.addEventListener('click', () => {
+    const word = btn.dataset.word;
+    const progress = getProgress(word);
+    if (btn.dataset.action === 'learned') {
+      setProgress(word, { learned: !progress.learned });
+    } else if (btn.dataset.action === 'unfamiliar') {
+      setProgress(word, { unfamiliar: !progress.unfamiliar });
+    }
+    renderStats(findDay(state.currentDate));
+    renderDayContent(findDay(state.currentDate));
+  }));
+}
+
 function renderDayContent(day) {
   const chunks = [];
   if (state.tab === 'new' || state.tab === 'all') chunks.push(wordsSection('新單字 30', day.newWords, '今天沒有新單字。'));
   if (state.tab === 'review' || state.tab === 'all') chunks.push(wordsSection('複習單字 10', day.reviewWords, '今天沒有複習單字。'));
   if (state.tab === 'story' || state.tab === 'all') chunks.push(storySection(day));
+  if (state.tab === 'learned') {
+    const learned = uniqueWordItems().filter(item => getProgress(wordKey(item)).learned);
+    chunks.push(wordsSection(`已學會 ${learned.length}`, learned, '還沒有標記為已學會的單字。'));
+  }
+  if (state.tab === 'unfamiliar') {
+    const unfamiliar = uniqueWordItems().filter(item => getProgress(wordKey(item)).unfamiliar);
+    chunks.push(wordsSection(`不熟單字 ${unfamiliar.length}`, unfamiliar, '還沒有標記為不熟的單字。'));
+  }
   $('#dayContent').innerHTML = chunks.join('');
+  bindProgressButtons();
 }
 
 function closeMobileNav() {
@@ -198,12 +366,15 @@ function renderSearch(query) {
     }
   }
   panel.hidden = false;
-  $('#resultList').innerHTML = results.length ? results.slice(0, 80).map(r => `
+  $('#resultList').innerHTML = results.length ? results.slice(0, 80).map(r => {
+    const p = getProgress(wordKey(r.item));
+    const badges = [p.learned ? '已學會' : '', p.unfamiliar ? '不熟' : ''].filter(Boolean).join(' · ');
+    return `
     <div class="result-item" data-date="${r.day.date}" data-tab="${r.type === 'newWords' ? 'new' : 'review'}">
       <strong>${escapeHtml(r.item.word)}</strong>
-      <span>${escapeHtml(r.item.chinese)} · ${escapeHtml(r.item.japanese)} · ${r.day.date} · ${r.type === 'newWords' ? '新單字' : '複習'}</span>
-    </div>
-  `).join('') : '<p class="empty">找不到符合的單字。</p>';
+      <span>${escapeHtml(r.item.chinese)} · ${escapeHtml(r.item.japanese)} · ${r.day.date} · ${r.type === 'newWords' ? '新單字' : '複習'}${badges ? ' · ' + escapeHtml(badges) : ''}</span>
+    </div>`;
+  }).join('') : '<p class="empty">找不到符合的單字。</p>';
 
   $$('.result-item').forEach(item => item.addEventListener('click', () => {
     setTab(item.dataset.tab);
@@ -251,6 +422,7 @@ async function init() {
   if (localStorage.getItem('studyTheme') === 'dark') document.body.classList.add('dark');
   const response = await fetch('web_assets/study_data.json');
   state.data = await response.json();
+  await initProgressDb();
   bindEvents();
   const hashDate = decodeURIComponent(location.hash.replace('#', ''));
   const initial = allDays().some(d => d.date === hashDate) ? hashDate : allDays()[0].date;
