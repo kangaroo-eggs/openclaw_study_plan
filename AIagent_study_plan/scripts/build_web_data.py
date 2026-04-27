@@ -11,6 +11,7 @@ OUT = ROOT / "web_assets" / "study_data.json"
 
 WORD_RE = re.compile(r"^(\d+)\. \*\*(.+?)\*\* \((.+?)\) - (.+?) - (.+?) - (.+?) \((.+)\)$")
 FRONT_RE = re.compile(r"^---\n(.*?)\n---\n", re.S)
+LEVEL_RE = re.compile(r"###\s*(.+)")
 
 
 def parse_frontmatter(text: str) -> dict:
@@ -53,6 +54,55 @@ def parse_words(sec: str) -> list[dict]:
             "japaneseExample": japanese_example,
         })
     return words
+
+
+def clean_source_word(raw: str) -> str:
+    return raw.strip().strip(".").strip()
+
+
+def parse_source_vocabulary() -> list[dict]:
+    source = ROOT / "7000words.txt"
+    if not source.exists():
+        return []
+    vocabulary = []
+    seen = set()
+    current_level = ""
+    number = 0
+    for line in source.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        level_match = LEVEL_RE.match(line)
+        if level_match:
+            current_level = level_match.group(1).strip()
+            rest = line[level_match.end():].strip()
+            if not rest:
+                continue
+            line = rest
+        if line.startswith("###"):
+            continue
+        for part in re.split(r",\s*", line):
+            word = clean_source_word(part)
+            if not word:
+                continue
+            key = word.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            number += 1
+            vocabulary.append({
+                "number": number,
+                "word": word,
+                "key": key,
+                "level": current_level,
+                "scheduled": False,
+                "pos": "",
+                "chinese": "",
+                "japanese": "",
+                "englishExample": "",
+                "japaneseExample": "",
+            })
+    return vocabulary
 
 
 def parse_story(sec: str) -> dict:
@@ -121,16 +171,36 @@ def main() -> None:
     all_words = []
     seen = set()
     parse_errors = []
+    scheduled_by_key = {}
     for day in days:
         for kind in ("newWords", "reviewWords"):
             for item in day[kind]:
                 if item.get("parse_error"):
                     parse_errors.append({"date": day["date"], "section": kind, "raw": item.get("raw")})
                     continue
-                key = (item["word"].lower(), item["pos"], item["chinese"], item["japanese"])
+                word_key = item["word"].lower()
+                key = (word_key, item["pos"], item["chinese"], item["japanese"])
+                enriched = {**item, "key": word_key, "firstDate": day["date"], "firstWeek": day["week"]}
+                if word_key not in scheduled_by_key:
+                    scheduled_by_key[word_key] = enriched
                 if key not in seen:
                     seen.add(key)
-                    all_words.append({**item, "firstDate": day["date"], "firstWeek": day["week"]})
+                    all_words.append(enriched)
+
+    source_vocabulary = parse_source_vocabulary()
+    complete_vocabulary = []
+    for item in source_vocabulary:
+        scheduled = scheduled_by_key.get(item["key"])
+        if scheduled:
+            complete_vocabulary.append({
+                **item,
+                **scheduled,
+                "number": item["number"],
+                "level": item["level"],
+                "scheduled": True,
+            })
+        else:
+            complete_vocabulary.append(item)
 
     payload = {
         "generatedAt": datetime.utcnow().isoformat(timespec="seconds") + "Z",
@@ -142,9 +212,12 @@ def main() -> None:
             "newWordEntries": sum(len(d["newWords"]) for d in days),
             "reviewWordEntries": sum(len(d["reviewWords"]) for d in days),
             "uniqueWordCards": len(all_words),
+            "sourceVocabulary": len(source_vocabulary),
+            "scheduledSourceVocabulary": sum(1 for item in complete_vocabulary if item.get("scheduled")),
             "parseErrors": len(parse_errors),
         },
         "allWords": all_words,
+        "completeVocabulary": complete_vocabulary,
         "parseErrors": parse_errors,
     }
     OUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")

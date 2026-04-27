@@ -190,7 +190,7 @@ function renderStats(day) {
   const ps = progressStats();
   $('#stats').innerHTML = `
     <div class="stat-card"><strong>${day.newWords.length}</strong><span>今日新單字</span></div>
-    <div class="stat-card"><strong>${day.reviewWords.length}</strong><span>今日複習</span></div>
+    <div class="stat-card"><strong>${state.data.stats.sourceVocabulary || state.data.stats.newWordEntries}</strong><span>所有單字</span></div>
     <div class="stat-card"><strong>${ps.learned}</strong><span>已學會</span></div>
     <div class="stat-card"><strong>${ps.unfamiliar}</strong><span>不熟單字</span></div>
   `;
@@ -205,27 +205,31 @@ function wordCard(item) {
   const classes = ['word-card'];
   if (progress.learned) classes.push('is-learned');
   if (progress.unfamiliar) classes.push('is-unfamiliar');
+  const hasDetails = Boolean(item.chinese || item.japanese || item.englishExample || item.japaneseExample);
+  const meta = [item.pos, item.level, item.firstDate ? `學習日 ${item.firstDate}` : '', item.scheduled === false ? '尚未排入計劃' : ''].filter(Boolean).join(' · ');
   return `
     <article class="${classes.join(' ')}" id="word-${escapeHtml(key)}" data-word="${escapeHtml(key)}">
       <div class="word-head">
         <span class="word-number">${item.number}</span>
         <div>
           <h4 class="word">${escapeHtml(item.word)}</h4>
-          <p class="pos">${escapeHtml(item.pos)}</p>
+          <p class="pos">${escapeHtml(meta)}</p>
         </div>
       </div>
       <div class="progress-actions" aria-label="單字熟悉度">
         <button class="progress-btn learned-btn ${progress.learned ? 'active' : ''}" data-action="learned" data-word="${escapeHtml(key)}" type="button">${progress.learned ? '已學會 ✓' : '標記已學會'}</button>
         <button class="progress-btn unfamiliar-btn ${progress.unfamiliar ? 'active' : ''}" data-action="unfamiliar" data-word="${escapeHtml(key)}" type="button">${progress.unfamiliar ? '不熟 ★' : '標記不熟'}</button>
       </div>
-      <div class="meaning-row">
-        <div><span class="label">中文</span><p class="chinese">${escapeHtml(item.chinese)}</p></div>
-        <div><span class="label">日本語</span><p class="japanese">${escapeHtml(item.japanese)}</p></div>
-      </div>
-      <div class="examples">
-        <p class="english-example">${escapeHtml(item.englishExample)}</p>
-        <p class="japanese-example">${escapeHtml(item.japaneseExample)}</p>
-      </div>
+      ${hasDetails ? `
+        <div class="meaning-row">
+          <div><span class="label">中文</span><p class="chinese">${escapeHtml(item.chinese || '—')}</p></div>
+          <div><span class="label">日本語</span><p class="japanese">${escapeHtml(item.japanese || '—')}</p></div>
+        </div>
+        <div class="examples">
+          <p class="english-example">${escapeHtml(item.englishExample || '')}</p>
+          <p class="japanese-example">${escapeHtml(item.japaneseExample || '')}</p>
+        </div>
+      ` : `<p class="empty">這個字還沒排進每日計劃，所以暫時沒有翻譯與例句。</p>`}
     </article>
   `;
 }
@@ -240,6 +244,7 @@ function wordsSection(title, words, emptyText) {
 }
 
 function uniqueWordItems() {
+  if (state.data.completeVocabulary?.length) return state.data.completeVocabulary;
   const seen = new Set();
   const items = [];
   for (const day of allDays()) {
@@ -304,6 +309,10 @@ function renderDayContent(day) {
   if (state.tab === 'new' || state.tab === 'all') chunks.push(wordsSection('新單字 30', day.newWords, '今天沒有新單字。'));
   if (state.tab === 'review' || state.tab === 'all') chunks.push(wordsSection('複習單字 10', day.reviewWords, '今天沒有複習單字。'));
   if (state.tab === 'story' || state.tab === 'all') chunks.push(storySection(day));
+  if (state.tab === 'vocabulary') {
+    const vocabulary = uniqueWordItems();
+    chunks.push(wordsSection(`所有單字 ${vocabulary.length}`, vocabulary, '沒有找到 7000words.txt 的單字資料。'));
+  }
   if (state.tab === 'learned') {
     const learned = uniqueWordItems().filter(item => getProgress(wordKey(item)).learned);
     chunks.push(wordsSection(`已學會 ${learned.length}`, learned, '還沒有標記為已學會的單字。'));
@@ -354,25 +363,25 @@ function renderSearch(query) {
     return;
   }
   const results = [];
-  for (const day of allDays()) {
-    for (const type of ['newWords', 'reviewWords']) {
-      for (const item of day[type]) {
-        if (item.parse_error) continue;
-        const haystack = [item.word, item.pos, item.chinese, item.japanese, item.englishExample, item.japaneseExample].join(' ').toLowerCase();
-        if (haystack.includes(q)) {
-          results.push({ day, type, item });
-        }
-      }
+  for (const item of uniqueWordItems()) {
+    if (item.parse_error) continue;
+    const haystack = [item.word, item.pos, item.level, item.chinese, item.japanese, item.englishExample, item.japaneseExample].join(' ').toLowerCase();
+    if (haystack.includes(q)) {
+      const day = item.firstDate ? findDay(item.firstDate) : findDay(state.currentDate);
+      results.push({ day, type: item.firstDate ? 'newWords' : 'vocabulary', item });
     }
   }
   panel.hidden = false;
-  $('#resultList').innerHTML = results.length ? results.slice(0, 80).map(r => {
+  $('#resultList').innerHTML = results.length ? results.slice(0, 120).map(r => {
     const p = getProgress(wordKey(r.item));
     const badges = [p.learned ? '已學會' : '', p.unfamiliar ? '不熟' : ''].filter(Boolean).join(' · ');
+    const tab = r.type === 'vocabulary' ? 'vocabulary' : 'new';
+    const place = r.item.firstDate ? `學習日 ${r.item.firstDate}` : (r.item.level || '所有單字');
+    const meaning = [r.item.chinese, r.item.japanese].filter(Boolean).join(' · ') || '尚未排入每日計劃';
     return `
-    <div class="result-item" data-date="${r.day.date}" data-tab="${r.type === 'newWords' ? 'new' : 'review'}">
+    <div class="result-item" data-date="${r.day.date}" data-tab="${tab}">
       <strong>${escapeHtml(r.item.word)}</strong>
-      <span>${escapeHtml(r.item.chinese)} · ${escapeHtml(r.item.japanese)} · ${r.day.date} · ${r.type === 'newWords' ? '新單字' : '複習'}${badges ? ' · ' + escapeHtml(badges) : ''}</span>
+      <span>${escapeHtml(meaning)} · ${escapeHtml(place)}${badges ? ' · ' + escapeHtml(badges) : ''}</span>
     </div>`;
   }).join('') : '<p class="empty">找不到符合的單字。</p>';
 
