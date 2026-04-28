@@ -32,3 +32,13 @@ AIagent_study_plan/scripts/generate_details_*.py
 AIagent_study_plan/scripts/refine_details_*.py
 fix_details_*.py
 tmp_fix*.py
+
+# Vocabulary correction scratch files
+AIagent_study_plan/vocabulary_details/fixed_*.json
+AIagent_study_plan/vocabulary_details/full_*.json
+AIagent_study_plan/vocabulary_details/raw_*.json
+AIagent_study_plan/vocabulary_details/temp_*.json
+AIagent_study_plan/vocabulary_details/lazy_*.json
+AIagent_study_plan/scripts/extract_json.py
+AIagent_study_plan/scripts/fix_placeholders.py
+AIagent_study_plan/scripts/refine_translations.py

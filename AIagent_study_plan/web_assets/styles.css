@@ -143,6 +143,9 @@ button.active, .tab.active { background: var(--brand); color: white; border-colo
 .meaning-row p, .examples p { margin: .15rem 0 0; }
 .english-example { color: var(--blue); font-weight: 650; }
 .japanese-example { color: var(--green); }
+ruby { ruby-position: over; }
+rt { font-size: .62em; color: var(--muted); font-weight: 600; line-height: 1; }
+.japanese ruby, .japanese-example ruby, .story-lang ruby { margin-inline: .02em; }
 
 .story-card { display: grid; gap: 1rem; }
 .story-used { display: flex; flex-wrap: wrap; gap: .4rem; }

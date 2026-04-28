@@ -1,0 +1,25 @@
+{
+  "name": "workspace",
+  "version": "1.0.0",
+  "description": "English 7000-word study plan with a static web reader.",
+  "main": "index.js",
+  "scripts": {
+    "build:data": "python3 AIagent_study_plan/scripts/build_web_data.py && node AIagent_study_plan/scripts/add_furigana.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kangaroo-eggs/openclaw_study_plan.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/kangaroo-eggs/openclaw_study_plan/issues"
+  },
+  "homepage": "https://github.com/kangaroo-eggs/openclaw_study_plan#readme",
+  "dependencies": {
+    "kuromoji": "^0.1.2",
+    "wanakana": "^5.3.1"
+  }
+}

@@ -197,6 +197,10 @@ function renderStats(day) {
   `;
 }
 
+function rubyOrText(htmlValue, textValue) {
+  return htmlValue || escapeHtml(textValue || '');
+}
+
 function wordCard(item) {
   if (item.parse_error) {
     return `<article class="word-card"><p class="empty">解析失敗：${escapeHtml(item.raw)}</p></article>`;
@@ -224,11 +228,11 @@ function wordCard(item) {
       ${hasDetails ? `
         <div class="meaning-row">
           <div><span class="label">中文</span><p class="chinese">${escapeHtml(item.chinese || '—')}</p></div>
-          <div><span class="label">日本語</span><p class="japanese">${escapeHtml(item.japanese || '—')}</p></div>
+          <div><span class="label">日本語</span><p class="japanese">${rubyOrText(item.japaneseRuby, item.japanese || '—')}</p></div>
         </div>
         <div class="examples">
           <p class="english-example">${escapeHtml(item.englishExample || '')}</p>
-          <p class="japanese-example">${escapeHtml(item.japaneseExample || '')}</p>
+          <p class="japanese-example">${rubyOrText(item.japaneseExampleRuby, item.japaneseExample || '')}</p>
         </div>
       ` : `<p class="empty">這個字還沒排進每日計劃，所以暫時沒有翻譯與例句。</p>`}
     </article>
@@ -285,7 +289,7 @@ function storySection(day) {
       </div>
       <div class="story-lang">
         <h4>日本語</h4>
-        <p>${escapeHtml(story.japanese)}</p>
+        <p>${rubyOrText(story.japaneseRuby, story.japanese)}</p>
       </div>
     </section>
   `;
